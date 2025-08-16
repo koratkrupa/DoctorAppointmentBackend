@@ -7,10 +7,10 @@ const userRoute = require("./routes/userRoutes")
 
 app.use(express.json())
 
-// app.use("/", (req, res) => {
-//      dbConnect();
-//      res.send("Welcome to the Doctor Appointment API");
-// })
+app.use("/", (req, res) => {
+     // dbConnect();
+     res.send("Welcome to the Doctor Appointment API");
+})
 
 app.use('/user', userRoute);
 
