@@ -7,6 +7,7 @@ const bcrypt = require("bcryptjs");
 // ✅ Register route
 router.post("/register", async (req, res) => {
   try {
+    console.log("Register API called", req.body);
 
     const { name, email, password, gender, phone, address, dob, role } = req.body;
 
@@ -16,11 +17,11 @@ router.post("/register", async (req, res) => {
       return res.status(400).json({ message: "❌ Email already registered" });
     }
 
-    // Create new user
+    // User create
     const user = new User({
       name,
       email,
-      password, // bcrypt pre-save hook hash karega
+      password, // bcrypt hook handle karega
       gender,
       phone,
       address,
@@ -30,12 +31,18 @@ router.post("/register", async (req, res) => {
 
     await user.save();
 
-    res.status(201).json({ message: "✅ User registered successfully" });
+    // 👇 yaha important change: user object bhi bhejna hai
+    res.status(201).json({ 
+      message: "✅ User registered successfully",
+      user: user 
+    });
+
   } catch (error) {
     console.error("❌ Register error:", error);
     res.status(500).json({ message: "Server error" });
   }
 });
+
 
 router.post("/login", async (req, res) => {
      try {
