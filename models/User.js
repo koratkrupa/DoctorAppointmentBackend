@@ -1,47 +1,23 @@
-const { type } = require('@testing-library/user-event/dist/type');
-const mongoose = require('mongoose')
+const mongoose = require("mongoose");
+const bcrypt = require("bcryptjs");
 
 const userSchema = new mongoose.Schema({
-
-     name: {
-          type: String,
-          required: true,
-          trim: true
-     },
-     email: {
-          type: String,
-          required: true,
-          unique: true,
-          lowercase: true
-     },
-     password: {
-          type: String,
-          required: true
-     },
-     phone: {
-          type: String,
-          required: true
-     },
-     address: {
-          type: String,
-          required: true
-     },
-     role: {
-          type: String,
-          enum: ['Patient', 'Doctor', 'Admin'],
-          default: 'Patient'
-     },
-     gender: {
-          type: String,
-          enum: ['Male', 'Female', 'Other'],
-          required: true
-     },
-     dob: {
-          type: Date,
-          required: true
-     }
-}, {
-     timestamps: true
+     name: { type: String, required: true },
+     email: { type: String, required: true, unique: true },
+     password: { type: String, required: true },
+     gender: { type: String, enum: ["Male", "Female", "Other"] },
+     phone: { type: String },
+     address: { type: String },
+     dob: { type: Date },
+     role: { type: String, enum: ["Patient", "Doctor", "Admin"], default: "Patient" },
 });
 
-module.exports = mongoose.model('User', userSchema);
+// ✅ Pre-save hook to hash password
+userSchema.pre("save", async function (next) {
+     if (!this.isModified("password")) return next();
+     const salt = await bcrypt.genSalt(10);
+     this.password = await bcrypt.hash(this.password, salt);
+     next();
+});
+
+module.exports = mongoose.model("User", userSchema);
