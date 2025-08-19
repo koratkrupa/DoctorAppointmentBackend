@@ -1,9 +1,13 @@
+// back-end/routes/doctor.js
 const express = require("express");
+const router = express.Router();
+const auth = require("../middleware/auth");
+const Doctor = require("../models/Doctor");
+const User = require("../models/User");
 const multer = require("multer");
 const path = require("path");
-const Doctor = require("../models/Doctor");
-
-const router = express.Router();
+let Appointment;
+try { Appointment = require("../models/Appointment"); } catch {}
 
 // ===== Multer setup for file upload =====
 const storage = multer.diskStorage({
@@ -43,6 +47,49 @@ router.post("/details", upload.single("profile_pic"), async (req, res) => {
     });
   } catch (error) {
     console.error("❌ Doctor details error:", error);
+    res.status(500).json({ message: "Server error" });
+  }
+});
+
+// GET /doctor/dashboard  -> Doctor + today's appointments count
+router.get("/dashboard", auth, async (req, res) => {
+  try {
+    // Doctor profile (linked by userId)
+    const doctor = await Doctor.findOne({ userId: req.userId }).lean();
+    if (!doctor) return res.status(404).json({ message: "Doctor profile not found" });
+
+    // linked user for name/email
+    const user = await User.findById(req.userId).lean();
+
+    // Today's appointments count (0 if model not present)
+    let todayCount = 0;
+    if (Appointment) {
+      const start = new Date(); start.setHours(0,0,0,0);
+      const end = new Date();   end.setHours(23,59,59,999);
+      todayCount = await Appointment.countDocuments({
+        doctorId: doctor._id,
+        time: { $gte: start, $lte: end },
+        status: { $ne: "cancelled" }
+      });
+    }
+
+    res.json({
+      doctor: {
+        id: doctor._id,
+        name: user?.name || "Doctor",
+        email: user?.email || "",
+        specialization: doctor.specialization,
+        qualification: doctor.qualification,
+        experience: doctor.experience,
+        fees: doctor.fees,
+        profile_pic: doctor.profile_pic // e.g. "/uploads/xyz.png"
+      },
+      stats: {
+        todayAppointments: todayCount
+      }
+    });
+  } catch (e) {
+    console.error("Dashboard error:", e);
     res.status(500).json({ message: "Server error" });
   }
 });

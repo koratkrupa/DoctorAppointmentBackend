@@ -6,41 +6,41 @@ const bcrypt = require("bcryptjs");
 
 // ✅ Register route
 router.post("/register", async (req, res) => {
-  try {
-    console.log("Register API called", req.body);
+     try {
+          console.log("Register API called", req.body);
 
-    const { name, email, password, gender, phone, address, dob, role } = req.body;
+          const { name, email, password, gender, phone, address, dob, role } = req.body;
 
-    // Email already exist check
-    const existingUser = await User.findOne({ email });
-    if (existingUser) {
-      return res.status(400).json({ message: "❌ Email already registered" });
-    }
+          // Email already exist check
+          const existingUser = await User.findOne({ email });
+          if (existingUser) {
+               return res.status(400).json({ message: "❌ Email already registered" });
+          }
 
-    // User create
-    const user = new User({
-      name,
-      email,
-      password, // bcrypt hook handle karega
-      gender,
-      phone,
-      address,
-      dob,
-      role,
-    });
+          // User create
+          const user = new User({
+               name,
+               email,
+               password, // bcrypt hook handle karega
+               gender,
+               phone,
+               address,
+               dob,
+               role,
+          });
 
-    await user.save();
+          await user.save();
 
-    // 👇 yaha important change: user object bhi bhejna hai
-    res.status(201).json({ 
-      message: "✅ User registered successfully",
-      user: user 
-    });
+          // 👇 yaha important change: user object bhi bhejna hai
+          res.status(201).json({
+               message: "✅ User registered successfully",
+               user: user
+          });
 
-  } catch (error) {
-    console.error("❌ Register error:", error);
-    res.status(500).json({ message: "Server error" });
-  }
+     } catch (error) {
+          console.error("❌ Register error:", error);
+          res.status(500).json({ message: "Server error" });
+     }
 });
 
 
@@ -69,13 +69,15 @@ router.post("/login", async (req, res) => {
           );
 
           res.json({
-               message: "✅ Login successful",
                token,
                user: {
-                    role: user.rol,
-                    userId: user._id,
-               },
+                    id: user._id,
+                    name: user.name,
+                    email: user.email,
+                    role: user.role
+               }
           });
+
      } catch (error) {
           console.error("❌ Login error:", err);
           res.status(500).json({ message: "❌ Server error" });
