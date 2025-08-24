@@ -130,10 +130,14 @@ router.get("/dashboard", auth, async (req, res) => {
         date: { $gte: start, $lte: end },
         status: { $ne: "Cancelled" }
       });
+      
+
 
       // total unique patients seen by this doctor
       const uniquePatients = await Appointment.distinct("user_id", { doctor_id: doctor._id });
       totalPatients = uniquePatients.length;
+      
+
 
       // upcoming appointments from now (status pending/confirmed)
       upcomingAppointments = await Appointment.countDocuments({
@@ -155,6 +159,8 @@ router.get("/dashboard", auth, async (req, res) => {
         id: doctor._id,
         name: user?.name || "Doctor",
         email: user?.email || "",
+        phone: user?.phone || "",
+        address: user?.address || "",
         specialization: doctor.specialization,
         qualification: doctor.qualification,
         experience: doctor.experience,
@@ -271,6 +277,11 @@ router.get("/all", async (req, res) => {
 // ===== POST Book Appointment =====
 router.post("/book-appointment", auth, async (req, res) => {
   try {
+    // Check if user is a patient
+    if (req.userRole !== "Patient") {
+      return res.status(403).json({ message: "Only patients can book appointments" });
+    }
+
     const { doctor_id, date, time, symptoms, notes } = req.body;
 
     if (!doctor_id || !date || !time) {
@@ -281,6 +292,14 @@ router.post("/book-appointment", auth, async (req, res) => {
     const doctor = await Doctor.findById(doctor_id);
     if (!doctor) {
       return res.status(404).json({ message: "Doctor not found" });
+    }
+
+    // Check if user is trying to book appointment with themselves (if they are a doctor)
+    if (req.userRole === "Doctor") {
+      const userDoctor = await Doctor.findOne({ userId: req.userId });
+      if (userDoctor && userDoctor._id.toString() === doctor_id) {
+        return res.status(400).json({ message: "Doctors cannot book appointments with themselves" });
+      }
     }
 
     // Check if appointment already exists for this time slot
@@ -297,7 +316,7 @@ router.post("/book-appointment", auth, async (req, res) => {
 
     // Create new appointment
     const appointment = new Appointment({
-      patient_id: req.userId,
+      user_id: req.userId,
       doctor_id,
       date,
       time,
@@ -307,6 +326,8 @@ router.post("/book-appointment", auth, async (req, res) => {
     });
 
     await appointment.save();
+    
+
 
     res.status(201).json({
       message: "Appointment booked successfully",
