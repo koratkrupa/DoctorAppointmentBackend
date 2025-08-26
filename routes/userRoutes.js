@@ -4,7 +4,7 @@ const User = require("../models/User");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const auth = require("../middleware/auth");
-const Appointment = require("../models/Appointment");
+const Appointment = require("../models/Appointment")
 // try { 
 //   Appointment =  
 //   console.log("Appointment model loaded successfully");
@@ -39,7 +39,7 @@ router.post("/register", async (req, res) => {
 
           await user.save();
 
-          // 👇 yaha important change: user object bhi bhejna hai
+          //user object bhi bhejna hai
           res.status(201).json({
                message: "✅ User registered successfully",
                user: user
@@ -115,7 +115,7 @@ router.get("/dashboard", auth, async (req, res) => {
     if (Appointment) {
       // Get all appointments for this patient to see what statuses exist
       const allAppointments = await Appointment.find({ user_id: req.userId }).lean();
-      console.log("Patient appointments statuses:", allAppointments.map(a => a.status));
+      // console.log("Patient appointments statuses:", allAppointments.map(a => a.status));
       
       // Total completed appointments (visits) - using more realistic statuses
       totalVisits = await Appointment.countDocuments({
@@ -141,16 +141,11 @@ router.get("/dashboard", auth, async (req, res) => {
 
       // If no appointments found, set default values for testing
       if (allAppointmentsWithFees.length === 0) {
-        console.log("No appointments found for patient, setting default values");
-        totalVisits = 0;
+         totalVisits = 0;
         upcomingAppointments = 0;
         totalBills = 0;
-      } else {
-        console.log(`Found ${allAppointmentsWithFees.length} appointments for patient`);
-        console.log("Appointment statuses:", allAppointmentsWithFees.map(a => a.status));
-        console.log("Total bills calculated:", totalBills);
-      }
-
+      } 
+      
       // Get recent appointments
       recentAppointments = await Appointment.find({
         user_id: req.userId
