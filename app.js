@@ -8,6 +8,7 @@ const Path = require("path");
 
 const userRoute = require("./routes/userRoutes")
 const doctorRoute = require("./routes/doctor")
+const adminRoute = require("./routes/admin")
 
 app.use(express.json())
 app.use(cors());
@@ -21,6 +22,7 @@ app.use("/uploads", express.static(Path.join(__dirname,"uploads")));
 
 app.use('/user', userRoute);
 app.use('/doctor', doctorRoute);
+app.use('/admin', adminRoute);
 
 dbConnect();
 

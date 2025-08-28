@@ -1,6 +1,7 @@
 const express = require("express");
 const router = express.Router();
 const User = require("../models/User");
+const Admin = require("../models/Admin");
 const jwt = require("jsonwebtoken");
 const bcrypt = require("bcryptjs");
 const auth = require("../middleware/auth");
@@ -38,6 +39,15 @@ router.post("/register", async (req, res) => {
           });
 
           await user.save();
+
+          // If user is Admin, create Admin record
+          if (role === "Admin") {
+            const admin = new Admin({
+              user_id: user._id,
+              permissions: ["view_appointments", "manage_appointments", "view_users", "view_doctors"]
+            });
+            await admin.save();
+          }
 
           //user object bhi bhejna hai
           res.status(201).json({
