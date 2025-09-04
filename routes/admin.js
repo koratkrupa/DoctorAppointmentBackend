@@ -11,6 +11,47 @@ router.get("/test", (req, res) => {
   res.json({ message: "Admin routes are working!" });
 });
 
+// ===== DEBUG ROUTE - Check Database Structure =====
+router.get("/debug-appointments", auth, async (req, res) => {
+  try {
+    // Check if user is admin
+    if (req.userRole !== "Admin") {
+      return res.status(403).json({ message: "Only admins can access this endpoint" });
+    }
+
+    // Get raw appointments without populate
+    const rawAppointments = await Appointment.find().limit(3).lean();
+    
+    // Get appointments with basic populate
+    const basicPopulated = await Appointment.find().limit(3)
+      .populate('user_id', 'name email phone')
+      .populate('doctor_id')
+      .lean();
+    
+    // Get appointments with nested populate
+    const nestedPopulated = await Appointment.find().limit(3)
+      .populate('user_id', 'name email phone')
+      .populate({
+        path: 'doctor_id',
+        populate: {
+          path: 'userId',
+          select: 'name email phone'
+        }
+      })
+      .lean();
+
+    res.json({
+      rawAppointments,
+      basicPopulated,
+      nestedPopulated,
+      message: "Debug data retrieved"
+    });
+  } catch (error) {
+    console.error("Debug appointments error:", error);
+    res.status(500).json({ message: "Server error", error: error.message });
+  }
+});
+
 // ===== GET All Appointments (Admin) =====
 router.get("/appointments", auth, async (req, res) => {
   try {
@@ -33,9 +74,21 @@ router.get("/appointments", auth, async (req, res) => {
       status: { $nin: ['Expired'] } // Don't show expired appointments
     })
       .populate('user_id', 'name email phone')
-      .populate('doctor_id', 'name specialization fees')
+      .populate({
+        path: 'doctor_id',
+        populate: {
+          path: 'userId',
+          select: 'name email phone'
+        }
+      })
       .sort({ date: -1, time: -1 })
       .lean();
+
+    // Check for appointments without doctor_id
+    const appointmentsWithoutDoctor = appointments.filter(appt => !appt.doctor_id);
+    if (appointmentsWithoutDoctor.length > 0) {
+      // silent
+    }
 
     // Format appointments for frontend
     const formattedAppointments = appointments.map(appt => ({
@@ -53,12 +106,16 @@ router.get("/appointments", auth, async (req, res) => {
       },
       doctor: {
         id: appt.doctor_id?._id,
-        name: appt.doctor_id?.name || "Unknown",
+        name: appt.doctor_id?.userId?.name || "Unknown",
+        email: appt.doctor_id?.userId?.email || "Unknown",
+        phone: appt.doctor_id?.userId?.phone || "Unknown",
         specialization: appt.doctor_id?.specialization || "Unknown",
         fees: appt.doctor_id?.fees || 0
       },
       createdAt: appt.createdAt
     }));
+
+    // silent
 
     res.json({
       appointments: formattedAppointments,
@@ -93,7 +150,13 @@ router.put("/appointments/:id/status", auth, async (req, res) => {
       id,
       { status },
       { new: true, runValidators: true }
-    ).populate('user_id', 'name email').populate('doctor_id', 'name specialization');
+    ).populate('user_id', 'name email').populate({
+      path: 'doctor_id',
+      populate: {
+        path: 'userId',
+        select: 'name email'
+      }
+    });
 
     if (!appointment) {
       return res.status(404).json({ message: "Appointment not found" });
@@ -111,7 +174,7 @@ router.put("/appointments/:id/status", auth, async (req, res) => {
           email: appointment.user_id?.email
         },
         doctor: {
-          name: appointment.doctor_id?.name,
+          name: appointment.doctor_id?.userId?.name,
           specialization: appointment.doctor_id?.specialization
         }
       }
@@ -159,7 +222,7 @@ router.get("/dashboard", auth, async (req, res) => {
         .populate('user_id', 'name email')
         .lean();
     } catch (error) {
-      console.log("Admin details not found, using default");
+      // silent
     }
 
     // Get statistics
@@ -175,10 +238,18 @@ router.get("/dashboard", auth, async (req, res) => {
     // Get recent appointments
     const recentAppointments = await Appointment.find()
       .populate('user_id', 'name email')
-      .populate('doctor_id', 'name specialization')
+      .populate({
+        path: 'doctor_id',
+        populate: {
+          path: 'userId',
+          select: 'name'
+        }
+      })
       .sort({ createdAt: -1 })
       .limit(5)
       .lean();
+
+    // silent
 
     const formattedRecentAppointments = recentAppointments.map(appt => ({
       id: appt._id,
@@ -186,9 +257,11 @@ router.get("/dashboard", auth, async (req, res) => {
       time: appt.time,
       status: appt.status,
       patient: appt.user_id?.name || "Unknown",
-      doctor: appt.doctor_id?.name || "Unknown",
+      doctor: appt.doctor_id?.userId?.name || "Unknown",
       specialization: appt.doctor_id?.specialization || "Unknown"
     }));
+
+    // console.log('Dashboard - Formatted recent appointments:', JSON.stringify(formattedRecentAppointments, null, 2)); // Debug log
 
     res.json({
       admin: {

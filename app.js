@@ -13,6 +13,15 @@ const adminRoute = require("./routes/admin")
 app.use(express.json())
 app.use(cors());
 
+// Log only API route path for backend calls
+app.use((req, res, next) => {
+    const url = req.originalUrl || req.url
+    if (url.startsWith('/user') || url.startsWith('/doctor') || url.startsWith('/admin')) {
+        console.log(url)
+    }
+    next()
+})
+
 // app.use("/", (req, res) => {
 //      // dbConnect();
 //      res.send("Welcome to the Doctor Appointment API");
